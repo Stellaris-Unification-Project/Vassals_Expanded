@@ -77,12 +77,9 @@ exalted_benevolent_intervention = {
 		modifier = {
 			factor = 0.5
 			NOR = {
-				has_ethic = ethic_egalitarian
-				has_ethic = ethic_fanatic_egalitarian
-				has_ethic = ethic_pacifist
-				has_ethic = ethic_fanatic_pacifist
-				has_ethic = ethic_xenophile
-				has_ethic = ethic_fanatic_xenophile
+				is_egalitarian = yes
+				is_pacifist = yes
+				is_xenophile = yes
 			}
 		}
 
@@ -162,12 +159,9 @@ exalted_developing_civilization_outreach = {
 		modifier = {
 			factor = 0.5
 			NOR = {
-				has_ethic = ethic_egalitarian
-				has_ethic = ethic_fanatic_egalitarian
-				has_ethic = ethic_pacifist
-				has_ethic = ethic_fanatic_pacifist
-				has_ethic = ethic_xenophile
-				has_ethic = ethic_fanatic_xenophile
+				is_egalitarian = yes
+				is_pacifist = yes
+				is_xenophile = yes
 			}
 		}
 
@@ -259,12 +253,9 @@ exalted_military_aid_packages = {
 		modifier = {
 			factor = 0.5
 			NOR = {
-				has_ethic = ethic_egalitarian
-				has_ethic = ethic_fanatic_egalitarian
-				has_ethic = ethic_pacifist
-				has_ethic = ethic_fanatic_pacifist
-				has_ethic = ethic_xenophile
-				has_ethic = ethic_fanatic_xenophile
+				is_egalitarian = yes
+				is_pacifist = yes
+				is_xenophile = yes
 			}
 		}
 
