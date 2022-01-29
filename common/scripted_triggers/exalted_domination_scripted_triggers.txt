@@ -1,0 +1,45 @@
+has_diplomatic_independence = {
+	OR = {
+		is_subject_type = exalted_subject_automated_assembler
+		is_subject_type = exalted_subject_beneficiary
+		# is_subject_type = exalted_subject_dominion
+		# is_subject_type = exalted_subject_noble_house
+		is_subject_type = exalted_subject_special_administrative_region
+		is_subject_type = exalted_subject_satellite
+		# is_subject_type = exalted_subject_symbiont
+		is_subject_type = exalted_subject_thrall
+		# is_subject_type = subsidiary
+		# is_subject_type = tributary
+	}
+}
+
+is_exalted_vassal = {
+	OR = {
+		is_subject_type = exalted_subject_automated_assembler
+		is_subject_type = exalted_subject_beneficiary
+		is_subject_type = exalted_subject_cultural_conservation
+		is_subject_type = exalted_subject_dominion
+		is_subject_type = exalted_subject_exarchate
+		is_subject_type = exalted_subject_noble_house
+		is_subject_type = exalted_subject_pet
+		is_subject_type = exalted_subject_remote_archive
+		is_subject_type = exalted_subject_special_administrative_region
+		is_subject_type = exalted_subject_symbiont
+		is_subject_type = exalted_subject_warden
+		is_subject_type = exalted_subject_xenoharvest
+		# Altered
+		is_subject_type = exalted_subject_symbiont
+		is_subject_type = exalted_subject_dominion
+		is_subject_type = exalted_subject_noble_house
+
+	}
+}
+
+vassal_can_be_reformed = {
+	OR = {
+		# is_subject_type = vassal
+		is_exalted_vassal = yes
+		is_vear_vassal_reform = yes
+	}
+	# is_megacorp = no
+}

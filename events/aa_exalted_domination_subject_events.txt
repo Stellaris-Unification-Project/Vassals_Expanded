@@ -1,0 +1,1632 @@
+namespace = exalted_subjects
+@NumPopsShiftedSome = 5
+@NumPopsShiftedMany = 10
+@BeneficiaryDefectionMin = 180
+@BeneficiaryDefectionVariance = 2880
+@BeneficiaryArrivalMin = 1
+@BeneficiaryArrivalVariance = 4
+@AutomatedAssemblerDeliveryVariance = 90
+@MachineCuratorArtifactsMin = 30
+@MachineCuratorArtifactsMax = 300
+@SymbioticBondsMin = 100
+@SymbioticBondsVariance = 3500
+
+# 0 Country made vassal or tributary; called by on_becoming_subject
+country_event = {
+	id = exalted_subjects.0
+	hide_window = yes
+	is_triggered_only = yes
+
+	trigger = {
+		exists = FROM
+		FROM = { exalted_is_valid_as_vassal = yes }
+	}
+
+	immediate = {
+		if = {
+			limit = {
+				OR = {
+					is_subject_type = vassal
+					is_exalted_vassal = yes
+				}
+			}
+
+			log = "exalted_subjects.0: [This.GetName] has been vassalized by [From.GetName]"
+			if = {
+				limit = {
+					is_gestalt = no
+					is_megacorp = no
+				}
+				FROM = {
+					country_event = { id = exalted_subjects.5 }
+				}
+			}
+			else_if = {
+				limit = {
+					is_gestalt = yes
+					is_machine_empire = yes
+				}
+				FROM = {
+					country_event = { id = exalted_subjects.7 }
+				}
+			}
+			else_if = {
+				limit = {
+					is_gestalt = yes
+					is_hive_empire = yes
+				}
+				FROM = {
+					country_event = { id = exalted_subjects.8 }
+				}
+			}
+		}
+		else_if = {
+			limit = {
+				is_subject_type = tributary
+			}
+
+			log = "exalted_subjects.0: [This.GetName] has been made a tributary by [From.GetName]"
+			FROM = {
+				country_event = { id = exalted_subjects.6 }
+			}
+		}
+	}
+}
+
+# 1 Country given AI bonus; called by on_becoming subject
+country_event = {
+	id = exalted_subjects.1
+	hide_window = yes
+	is_triggered_only = yes
+
+	trigger = {
+		NOT = { has_country_flag = exalted_domination_difficulty_bonus }
+		is_ai = yes
+		exists = FROM
+		FROM = { is_ai = no }
+	}
+
+	immediate = {
+		set_country_flag = exalted_domination_difficulty_bonus
+
+		if = {
+			limit = { 
+				OR = {
+					is_difficulty = 0
+					is_difficulty = 1
+					is_difficulty = 2
+				}
+			}
+
+			log = "exalted_subjects.1: [This.GetName] granted Captain difficulty bonus"
+			add_modifier = { modifier = difficulty_captain }
+		}
+		else_if = {
+			limit = {
+				is_difficulty = 3
+			}
+
+			log = "exalted_subjects.1: [This.GetName] granted Commodore difficulty bonus"
+			add_modifier = { modifier = difficulty_commodore }
+		}
+		else_if = {
+			limit = {
+				is_difficulty = 4
+			}
+
+			log = "exalted_subjects.1: [This.GetName] granted Admiral difficulty bonus"
+			add_modifier = { modifier = difficulty_admiral }
+		}
+		else_if = {
+			limit = {
+				is_difficulty = 5
+			}
+
+			log = "exalted_subjects.1: [This.GetName] granted Grant Admiral difficulty bonus"
+			add_modifier = { modifier = difficulty_grand_admiral }
+		}
+		else = {
+			log = "exalted_subjects.1: [This.GetName] granted no difficulty bonus"
+		}
+	}
+}
+
+# 2 Check for vanilla vassals; called by on_monthly_pulse_country
+# This is necessary because there are no actions for protectorates becoming vassals
+country_event = {
+	id = exalted_subjects.2
+	hide_window = yes
+	is_triggered_only = yes
+
+	trigger = {
+		NOT = { has_country_flag = exalted_advanced_tributary_offered }
+		NOT = { has_country_flag = exalted_advanced_vassal_offered }
+		OR = { 
+			is_subject_type = tributary
+			AND = {
+				is_subject_type = vassal
+				is_megacorp = no
+			}
+		}
+		exists = OVERLORD
+		OVERLORD = { is_country_type = default }
+	}
+
+	immediate = {
+		if = {
+			limit = {
+				is_subject_type = vassal
+			}
+
+			if = {
+				limit = {
+					is_gestalt = no
+					is_megacorp = no
+				}
+
+				log = "exalted_subjects.2: [This.GetName] is a vanilla vassal; offer chance to change"
+				OVERLORD = {
+					country_event = { id = exalted_subjects.5 }
+				}
+			}
+			else_if = {
+				limit = {
+					is_gestalt = yes
+					is_machine_empire = yes
+				}
+
+				log = "exalted_subjects.2: [This.GetName] is a vanilla machine empire vassal; offer chance to change"
+				OVERLORD = {
+					country_event = { id = exalted_subjects.7 }
+				}
+			}
+			else_if = {
+				limit = {
+					is_gestalt = yes
+					is_hive_empire = yes
+				}
+
+				log = "exalted_subjects.2: [This.GetName] is a vanilla hive mind vassal; offer chance to change"
+				OVERLORD = {
+					country_event = { id = exalted_subjects.8 }
+				}
+			}
+			else = {
+				log = "exalted_subjects.2: [This.GetName] is a not supported empire type for advanced vassals"
+			}
+		}
+		else_if = {
+			limit = {
+				is_subject_type = tributary
+			}
+	
+			log = "exalted_subjects.2: [This.GetName] is a vanilla tributary; offer chance to change"
+			OVERLORD = {
+				country_event = { id = exalted_subjects.6 }
+			}
+		}
+	}
+}
+
+# # 3 Build list of subjects to reform vassal type
+# country_event = {
+# 	id = exalted_subjects.3
+# 	hide_window = yes
+# 	is_triggered_only = yes
+
+# 	immediate = {
+# 		every_subject = {
+# 			remove_country_flag = exalted_domination_subject_reform_candidate
+# 		}
+
+# 		random_subject = {
+# 			limit = {
+# 				NOT = { has_country_flag = exalted_domination_subject_reform_candidate }
+# 				vassal_can_be_reformed = yes
+# 			}
+
+# 			set_country_flag = exalted_domination_subject_reform_candidate
+# 			save_event_target_as = exalted_domination_subject_r1
+# 		}
+
+# 		random_subject = {
+# 			limit = {
+# 				NOT = { has_country_flag = exalted_domination_subject_reform_candidate }
+# 				vassal_can_be_reformed = yes
+# 			}
+
+# 			set_country_flag = exalted_domination_subject_reform_candidate
+# 			save_event_target_as = exalted_domination_subject_r2
+# 		}
+
+# 		random_subject = {
+# 			limit = {
+# 				NOT = { has_country_flag = exalted_domination_subject_reform_candidate }
+# 				vassal_can_be_reformed = yes
+# 			}
+
+# 			set_country_flag = exalted_domination_subject_reform_candidate
+# 			save_event_target_as = exalted_domination_subject_r3
+# 		}
+
+# 		random_subject = {
+# 			limit = {
+# 				NOT = { has_country_flag = exalted_domination_subject_reform_candidate }
+# 				vassal_can_be_reformed = yes
+# 			}
+
+# 			set_country_flag = exalted_domination_subject_reform_candidate
+# 			save_event_target_as = exalted_domination_subject_r4
+# 		}
+
+# 		random_subject = {
+# 			limit = {
+# 				NOT = { has_country_flag = exalted_domination_subject_reform_candidate }
+# 				vassal_can_be_reformed = yes
+# 			}
+
+# 			set_country_flag = exalted_domination_subject_reform_candidate
+# 			save_event_target_as = exalted_domination_subject_r5
+# 		}
+
+# 		random_subject = {
+# 			limit = {
+# 				NOT = { has_country_flag = exalted_domination_subject_reform_candidate }
+# 				vassal_can_be_reformed = yes
+# 			}
+
+# 			set_country_flag = exalted_domination_subject_reform_candidate
+# 			save_event_target_as = exalted_domination_subject_r6
+# 		}
+
+# 		random_subject = {
+# 			limit = {
+# 				NOT = { has_country_flag = exalted_domination_subject_reform_candidate }
+# 				vassal_can_be_reformed = yes
+# 			}
+
+# 			set_country_flag = exalted_domination_subject_reform_candidate
+# 			save_event_target_as = exalted_domination_subject_r7
+# 		}
+
+# 		random_subject = {
+# 			limit = {
+# 				NOT = { has_country_flag = exalted_domination_subject_reform_candidate }
+# 				vassal_can_be_reformed = yes
+# 			}
+
+# 			set_country_flag = exalted_domination_subject_reform_candidate
+# 			save_event_target_as = exalted_domination_subject_r8
+# 		}
+
+# 		random_subject = {
+# 			limit = {
+# 				NOT = { has_country_flag = exalted_domination_subject_reform_candidate }
+# 				vassal_can_be_reformed = yes
+# 			}
+
+# 			set_country_flag = exalted_domination_subject_reform_candidate
+# 			save_event_target_as = exalted_domination_subject_r9
+# 		}
+
+# 		random_subject = {
+# 			limit = {
+# 				NOT = { has_country_flag = exalted_domination_subject_reform_candidate }
+# 				vassal_can_be_reformed = yes
+# 			}
+
+# 			set_country_flag = exalted_domination_subject_reform_candidate
+# 			save_event_target_as = exalted_domination_subject_r10
+# 		}
+
+# 		country_event = { id = exalted_subjects.4 }
+# 	}
+# }
+
+# # 4
+# country_event = {
+# 	id = exalted_subjects.4
+# 	title = exalted_subjects.4.name
+# 	picture = GFX_evt_signing
+# 	is_triggered_only = yes
+
+	
+
+# 	option = {
+# 		name = "[event_target:exalted_domination_subject_r1.GetName]"
+# 		trigger = { exists = event_target:exalted_domination_subject_r1 }
+
+# 		hidden_effect = {
+# 			event_target:exalted_domination_subject_r1 = {
+# 				save_event_target_as = exalted_domination_reform_subject
+# 			}
+# 		}
+# 	}
+
+# 	option = {
+# 		name = "[event_target:exalted_domination_subject_r2.GetName]"
+# 		trigger = { exists = event_target:exalted_domination_subject_r2 }
+
+# 		hidden_effect = {
+# 			event_target:exalted_domination_subject_r2 = {
+# 				save_event_target_as = exalted_domination_reform_subject
+# 			}
+# 		}
+# 	}
+
+# 	option = {
+# 		name = "[event_target:exalted_domination_subject_r3.GetName]"
+# 		trigger = { exists = event_target:exalted_domination_subject_r3 }
+
+# 		hidden_effect = {
+# 			event_target:exalted_domination_subject_r3 = {
+# 				save_event_target_as = exalted_domination_reform_subject
+# 			}
+# 		}
+# 	}
+
+# 	option = {
+# 		name = "[event_target:exalted_domination_subject_r4.GetName]"
+# 		trigger = { exists = event_target:exalted_domination_subject_r4 }
+
+# 		hidden_effect = {
+# 			event_target:exalted_domination_subject_r4 = {
+# 				save_event_target_as = exalted_domination_reform_subject
+# 			}
+# 		}
+# 	}
+
+# 	option = {
+# 		name = "[event_target:exalted_domination_subject_r5.GetName]"
+# 		trigger = { exists = event_target:exalted_domination_subject_r5 }
+
+# 		hidden_effect = {
+# 			event_target:exalted_domination_subject_r5 = {
+# 				save_event_target_as = exalted_domination_reform_subject
+# 			}
+# 		}
+# 	}
+
+# 	option = {
+# 		name = "[event_target:exalted_domination_subject_r6.GetName]"
+# 		trigger = { exists = event_target:exalted_domination_subject_r6 }
+
+# 		hidden_effect = {
+# 			event_target:exalted_domination_subject_r6 = {
+# 				save_event_target_as = exalted_domination_reform_subject
+# 			}
+# 		}
+# 	}
+
+# 	option = {
+# 		name = "[event_target:exalted_domination_subject_r7.GetName]"
+# 		trigger = { exists = event_target:exalted_domination_subject_r7 }
+
+# 		hidden_effect = {
+# 			event_target:exalted_domination_subject_r7 = {
+# 				save_event_target_as = exalted_domination_reform_subject
+# 			}
+# 		}
+# 	}
+
+# 	option = {
+# 		name = "[event_target:exalted_domination_subject_r8.GetName]"
+# 		trigger = { exists = event_target:exalted_domination_subject_r8 }
+
+# 		hidden_effect = {
+# 			event_target:exalted_domination_subject_r8 = {
+# 				save_event_target_as = exalted_domination_reform_subject
+# 			}
+# 		}
+# 	}
+
+# 	option = {
+# 		name = "[event_target:exalted_domination_subject_r9.GetName]"
+# 		trigger = { exists = event_target:exalted_domination_subject_r9 }
+
+# 		hidden_effect = {
+# 			event_target:exalted_domination_subject_r9 = {
+# 				save_event_target_as = exalted_domination_reform_subject
+# 			}
+# 		}
+# 	}
+
+# 	option = {
+# 		name = "[event_target:exalted_domination_subject_r10.GetName]"
+# 		trigger = { exists = event_target:exalted_domination_subject_r10 }
+
+# 		hidden_effect = {
+# 			event_target:exalted_domination_subject_r10 = {
+# 				save_event_target_as = exalted_domination_reform_subject
+# 			}
+# 		}
+# 	}
+
+# 	option = {
+# 		name = exalted_subjects.4.choice
+# 	}
+
+# 	after = {
+# 		if = {
+# 			limit = {
+# 				exists = event_target:exalted_domination_reform_subject
+# 			}
+
+# 			event_target:exalted_domination_reform_subject = {
+# 				remove_country_flag = exalted_advanced_vassal_offered
+
+# 				country_event = { id = exalted_subjects.999 }
+# 				country_event = { id = exalted_subjects.0 }
+# 			}
+# 		}
+# 	}
+# }
+
+# 5 Overlord chooses type of new vassal
+country_event = {
+	id = exalted_subjects.5
+	title = exalted_subjects.5.name
+	desc = exalted_subjects.5.desc
+	picture = GFX_evt_arguing_senate
+	show_sound = event_conversation
+	location = from
+
+	is_triggered_only = yes
+
+	trigger = {
+		exists = FROM
+		FROM = {
+			NOT = { has_country_flag = exalted_advanced_vassal_offered }
+			is_gestalt = no
+			is_megacorp = no
+		}
+		is_overlord_to = FROM
+	}
+
+	immediate = {
+		log = "exalted_subjects.5: [This.GetName] deciding subjugation of [From.GetName]"
+		FROM = {
+			set_country_flag = exalted_advanced_vassal_offered
+		}
+	}
+
+	# Transform into Beneficiary
+	option = {
+		name = SUBJECT_exalted_subject_beneficiary
+		custom_tooltip = choice_exalted_subject_beneficiary_tooltip
+		trigger = {
+			OR = {
+				has_civic = civic_feudal_realm
+				has_authority = auth_hive_mind
+				AND = {
+					has_authority = auth_machine_intelligence
+					NOT = { has_civic = civic_machine_servitor }
+				}
+				has_ethic = ethic_egalitarian
+				has_ethic = ethic_fanatic_egalitarian
+				has_ethic = ethic_xenophile
+				has_ethic = ethic_fanatic_xenophile
+			}
+		}
+		hidden_effect = {
+			log = "exalted_subjects.5: [This.GetName] chose to make [From.GetName] a Beneficiary"
+			FROM = {
+				set_subject_of = {
+					who = PREV
+					subject_type = exalted_subject_beneficiary
+				}
+
+				country_event = { id = exalted_subjects.10 }
+			}
+		}
+	}
+
+	# Transform into Cultural Conservation
+	option = {
+		name = SUBJECT_exalted_subject_cultural_conservation
+		custom_tooltip = choice_exalted_subject_cultural_conservation_tooltip
+		trigger = {
+			OR = {
+				has_civic = civic_feudal_realm
+				has_authority = auth_machine_intelligence
+				has_ethic = ethic_pacifist
+				has_ethic = ethic_fanatic_pacifist
+				has_ethic = ethic_xenophile
+				has_ethic = ethic_fanatic_xenophile
+			}
+		}
+		hidden_effect = {
+			log = "exalted_subjects.5: [This.GetName] chose to make [From.GetName] a Cultural Conservation"
+			FROM = {
+				set_subject_of = {
+					who = PREV
+					subject_type = exalted_subject_cultural_conservation
+				}
+
+				country_event = { id = exalted_subjects.19 }
+			}
+		}
+	}
+
+	# Transform into Dominion
+	option = {
+		name = SUBJECT_exalted_subject_dominion
+		custom_tooltip = choice_exalted_subject_dominion_tooltip
+		trigger = {
+			OR = {
+				has_civic = civic_feudal_realm
+				has_ethic = ethic_authoritarian
+				has_ethic = ethic_fanatic_authoritarian
+				has_ethic = ethic_spiritualist
+				has_ethic = ethic_fanatic_spiritualist
+			}
+		}
+		hidden_effect = {
+			log = "exalted_subjects.5: [This.GetName] chose to make [From.GetName] a Dominion"
+			FROM = {
+				set_subject_of = {
+					who = PREV
+					subject_type = exalted_subject_dominion
+				}
+
+				country_event = { id = exalted_subjects.11 }
+			}
+		}
+	}
+
+	# Transform into Exarchate
+	option = {
+		name = SUBJECT_exalted_subject_exarchate
+		custom_tooltip = choice_exalted_subject_exarchate_tooltip
+		trigger = {
+			OR = {
+				has_civic = civic_feudal_realm
+				has_authority = auth_hive_mind
+				has_authority = auth_machine_intelligence
+				has_ethic = ethic_egalitarian
+				has_ethic = ethic_fanatic_egalitarian
+				has_ethic = ethic_spiritualist
+				has_ethic = ethic_fanatic_spiritualist
+			}
+		}
+		hidden_effect = {
+			log = "exalted_subjects.5: [This.GetName] chose to make [From.GetName] an Exarchate"
+			FROM = {
+				set_subject_of = {
+					who = PREV
+					subject_type = exalted_subject_exarchate
+				}
+    
+				country_event = { id = exalted_subjects.20 }
+			}
+		}
+	}
+
+	# Transform into Noble House
+	option = {
+		name = SUBJECT_exalted_subject_noble_house
+		custom_tooltip = choice_exalted_subject_noble_house_tooltip
+		trigger = {
+			OR = {
+				has_civic = civic_feudal_realm
+				has_ethic = ethic_authoritarian
+				has_ethic = ethic_fanatic_authoritarian
+				has_ethic = ethic_militarist
+				has_ethic = ethic_fanatic_militarist
+			}
+		}
+		hidden_effect = {
+			log = "exalted_subjects.5: [This.GetName] chose to make [From.GetName] a Noble House"
+			owner_species = {
+				save_event_target_as = exalted_domination_main_species
+			}
+
+			every_owned_leader = {
+				remove_leader_flag = exalted_domination_house_candidate
+			}
+
+			random_owned_leader = {
+				limit = {
+					NOT = { has_leader_flag = exalted_domination_house_candidate}
+					leader_class = admiral
+				}
+
+				set_leader_flag = exalted_domination_house_candidate
+				save_event_target_as = exalted_domination_house_adm1
+			}
+
+			random_owned_leader = {
+				limit = {
+					NOT = { has_leader_flag = exalted_domination_house_candidate}
+					leader_class = admiral
+				}
+
+				set_leader_flag = exalted_domination_house_candidate
+				save_event_target_as = exalted_domination_house_adm2
+			}
+
+			random_owned_leader = {
+				limit = {
+					NOT = { has_leader_flag = exalted_domination_house_candidate}
+					leader_class = admiral
+				}
+
+				set_leader_flag = exalted_domination_house_candidate
+				save_event_target_as = exalted_domination_house_adm3
+			}
+
+			random_owned_leader = {
+				limit = {
+					NOT = { has_leader_flag = exalted_domination_house_candidate}
+					leader_class = admiral
+				}
+
+				set_leader_flag = exalted_domination_house_candidate
+				save_event_target_as = exalted_domination_house_adm4
+			}
+
+			random_owned_leader = {
+				limit = {
+					NOT = { has_leader_flag = exalted_domination_house_candidate}
+					leader_class = admiral
+				}
+
+				set_leader_flag = exalted_domination_house_candidate
+				save_event_target_as = exalted_domination_house_adm5
+			}
+
+			random_owned_leader = {
+				limit = {
+					NOT = { has_leader_flag = exalted_domination_house_candidate}
+					leader_class = governor
+				}
+
+				set_leader_flag = exalted_domination_house_candidate
+				save_event_target_as = exalted_domination_house_gov1
+			}
+
+			random_owned_leader = {
+				limit = {
+					NOT = { has_leader_flag = exalted_domination_house_candidate}
+					leader_class = governor
+				}
+
+				set_leader_flag = exalted_domination_house_candidate
+				save_event_target_as = exalted_domination_house_gov2
+			}
+
+			random_owned_leader = {
+				limit = {
+					NOT = { has_leader_flag = exalted_domination_house_candidate}
+					leader_class = governor
+				}
+
+				set_leader_flag = exalted_domination_house_candidate
+				save_event_target_as = exalted_domination_house_gov3
+			}
+
+			random_owned_leader = {
+				limit = {
+					NOT = { has_leader_flag = exalted_domination_house_candidate}
+					leader_class = governor
+				}
+
+				set_leader_flag = exalted_domination_house_candidate
+				save_event_target_as = exalted_domination_house_gov4
+			}
+
+			random_owned_leader = {
+				limit = {
+					NOT = { has_leader_flag = exalted_domination_house_candidate}
+					leader_class = governor
+				}
+
+				set_leader_flag = exalted_domination_house_candidate
+				save_event_target_as = exalted_domination_house_gov5
+			}
+
+			FROM = {
+				save_event_target_as = exalted_domination_declared_house
+				set_subject_of = {
+					who = PREV
+					subject_type = exalted_subject_noble_house
+				}
+
+				country_event = { id = exalted_subjects.18 }
+			}
+
+			country_event = { id = exalted_subjects.180 }
+		}
+	}
+
+	# Transform into Special Administrative Region
+	option = {
+		name = SUBJECT_exalted_subject_special_administrative_region
+		custom_tooltip = choice_exalted_subject_special_administrative_region_tooltip
+		trigger = {
+			OR = {
+				has_civic = civic_feudal_realm
+				has_authority = auth_machine_intelligence
+				has_ethic = ethic_materialist
+				has_ethic = ethic_fanatic_materialist
+				has_ethic = ethic_militarist
+				has_ethic = ethic_fanatic_militarist
+			}
+		}
+		hidden_effect = {
+			log = "exalted_subjects.5: [This.GetName] chose to make [From.GetName] a Special Administrative Region"
+			FROM = {
+				set_subject_of = {
+					who = PREV
+					subject_type = exalted_subject_special_administrative_region
+				}
+
+				country_event = { id = exalted_subjects.12 }
+			}
+		}
+	}
+	
+	# Transform into Warden
+	option = {
+		name = SUBJECT_exalted_subject_warden
+		custom_tooltip = choice_exalted_subject_warden_tooltip
+		trigger = {
+			OR = {
+				has_civic = civic_feudal_realm
+				has_authority = auth_hive_mind
+				has_civic = civic_machine_servitor
+				has_ethic = ethic_pacifist
+				has_ethic = ethic_fanatic_pacifist
+				has_ethic = ethic_xenophobe
+				has_ethic = ethic_fanatic_xenophobe
+			}
+		}
+		hidden_effect = {
+			log = "exalted_subjects.5: [This.GetName] chose to make [From.GetName] a Warden"
+			FROM = {
+				set_subject_of = {
+					who = PREV
+					subject_type = exalted_subject_warden
+				}
+
+				country_event = { id = exalted_subjects.13 }
+			}
+		}
+	}
+
+	# Transform into Xenoharvest
+	option = {
+		name = SUBJECT_exalted_subject_xenoharvest
+		custom_tooltip = choice_exalted_subject_xenoharvest_tooltip
+		trigger = {
+			OR = {
+				# has_civic = civic_feudal_realm
+				has_authority = auth_hive_mind
+				has_civic = civic_machine_servitor
+				# has_ethic = ethic_materialist
+				# has_ethic = ethic_fanatic_materialist
+				# has_ethic = ethic_xenophobe
+				# has_ethic = ethic_fanatic_xenophobe
+			}
+		}
+		hidden_effect = {
+			log = "exalted_subjects.5: [This.GetName] chose to make [From.GetName] a Xenoharvest"
+			FROM = {
+				set_subject_of = {
+					who = PREV
+					subject_type = exalted_subject_xenoharvest
+				}
+
+				country_event = { id = exalted_subjects.21 }
+			}
+		}
+	}
+
+	# Transform into Puppet State (Authoritarian)
+	option = {
+		name = ver.100.puppet
+		custom_tooltip = ver.100.puppet.tooltip
+		trigger = {
+			OR = {
+				has_ethic = ethic_authoritarian
+				has_ethic = ethic_fanatic_authoritarian
+				has_valid_civic = civic_feudal_realm
+			}
+		}
+		ai_chance = {
+			factor = 100
+			modifier = {
+				factor = 0
+				is_authoritarian = no
+			}
+			modifier = {
+				factor = 2
+				has_ethic = ethic_fanatic_authoritarian
+			}
+			modifier = {
+				factor = 3
+				has_valid_civic = civic_shadow_council
+			}
+			modifier = {
+				factor = 0.5
+				is_xenophile = yes
+			}
+		}
+		hidden_effect = {
+			from = {
+				set_subject_of = {
+					who = ROOT
+					subject_type = verpuppet
+				}
+				add_modifier = { modifier = ver_puppet_state days = -1}
+			}
+		}
+	}
+
+	# Transform into Sister Republic (Egalitarian)
+	option = {
+		name = ver.100.sister
+		custom_tooltip = ver.100.sister.tooltip
+		trigger = {
+			OR = {
+				has_ethic = ethic_egalitarian
+				has_ethic = ethic_fanatic_egalitarian
+				has_valid_civic = civic_feudal_realm
+			}
+			from = {
+				NOT = {
+					has_ethic = ethic_gestalt_consciousness
+				}
+			}
+		}
+		ai_chance = {
+			factor = 100
+			modifier = {
+				factor = 0
+				is_egalitarian = no
+			}
+			modifier = {
+				factor = 2
+				has_ethic = ethic_fanatic_egalitarian
+			}
+			modifier = {
+				factor = 3
+				has_valid_civic = civic_beacon_of_liberty
+			}
+			modifier = {
+				factor = 10
+				has_ai_personality = democratic_crusaders
+			}
+			modifier = {
+				factor = 0.5
+				is_xenophobe = yes
+			}
+		}
+		hidden_effect = {
+			from = {
+				set_subject_of = {
+					who = ROOT
+					subject_type = versister
+				}
+				if = {
+					limit = {	has_ethic = ethic_fanatic_authoritarian }
+					change_government = {
+						authority = auth_dictatorial
+						civics = {
+							civic = civic_staged_elections
+							civic = civic_police_state
+						}
+					}
+				}
+				else_if = {
+					limit = {	has_ethic = ethic_authoritarian	}
+					change_government = {
+						authority = auth_oligarchic
+						civics = {
+							civic = civic_staged_elections
+							civic = random
+						}
+					}
+				}
+				else_if = {
+					limit = {
+						is_authoritarian = no
+						NOT = { has_authority = auth_democratic }
+					}
+					change_government = {
+						authority = auth_democratic
+					}
+				}
+			}
+		}
+	}
+
+	# Transform into Jr. Partner (Materialist)
+	option = {
+		name = ver.100.jrpartner
+		custom_tooltip = ver.100.jrpartner.tooltip
+		trigger = {
+			OR = {
+				has_ethic = ethic_materialist
+				has_ethic = ethic_fanatic_materialist
+				has_valid_civic = civic_feudal_realm
+			}
+		}
+		ai_chance = {
+			factor = 100
+			modifier = {
+				factor = 0
+				is_materialist = no
+			}
+			modifier = {
+				factor = 2
+				has_ethic = ethic_fanatic_materialist
+			}
+			modifier = {
+				factor = 3
+				has_valid_civic = civic_technocracy
+			}
+		}
+		hidden_effect = {
+			from = {
+				set_subject_of = {
+					who = ROOT
+					subject_type = verjrpartner
+				}
+			}
+		}
+	}
+
+	# Transform into Foederatus (Militarist)
+	option = {
+		name = ver.100.foederatus
+		custom_tooltip = ver.100.foederatus.tooltip
+		trigger = {
+			OR = {
+				has_ethic = ethic_militarist
+				has_ethic = ethic_fanatic_militarist
+				has_valid_civic = civic_feudal_realm
+			}
+			from = {
+				is_pacifist = no
+			}
+		}
+		ai_chance = {
+			factor = 100
+			modifier = {
+				factor = 0
+				is_militarist = no
+			}
+			modifier = {
+				factor = 2
+				has_ethic = ethic_fanatic_militarist
+			}
+			modifier = {
+				factor = 3
+				has_valid_civic = civic_warrior_culture
+			}
+		}
+		hidden_effect = {
+			from = {
+				set_subject_of = {
+					who = ROOT
+					subject_type = verfoederatus
+				}
+				add_modifier = { modifier = ver_military_subsidies days = -1 }
+			}
+		}
+	}
+
+	# Transform into Autonomous Region (Pacifist)
+	option = {
+		name = ver.100.autonomous
+		custom_tooltip = ver.100.autonomous.tooltip
+		trigger = {
+			OR = {
+				has_ethic = ethic_pacifist
+				has_ethic = ethic_fanatic_pacifist
+				has_valid_civic = civic_machine_servitor
+				has_valid_civic = civic_feudal_realm
+			}
+		}
+		ai_chance = {
+			factor = 100
+			modifier = {
+				factor = 0
+				NOR = {
+					is_pacifist = yes
+					has_valid_civic = civic_machine_servitor
+				}
+			}
+			modifier = {
+				factor = 2
+				has_ethic = ethic_fanatic_pacifist
+			}
+			modifier = {
+				factor = 3
+				has_valid_civic = civic_agrarian_idyll
+			}
+		}
+		hidden_effect = {
+			from = {
+				set_subject_of = {
+					who = ROOT
+					subject_type = verautonomous
+				}
+				add_modifier = { modifier = ver_demilitarized days = -1 }
+			}
+		}
+	}
+
+	# Transform into Disciple (Spiritualist)
+	option = {
+		name = ver.100.disciple
+		custom_tooltip = ver.100.disciple.tooltip
+		trigger = {
+			OR = {
+				has_ethic = ethic_spiritualist
+				has_ethic = ethic_fanatic_spiritualist
+			}
+		}
+		ai_chance = {
+			factor = 100
+			modifier = {
+				factor = 0
+				is_spiritualist = no
+			}
+			modifier = {
+				factor = 2
+				has_ethic = ethic_fanatic_spiritualist
+			}
+			modifier = {
+				factor = 3
+				has_valid_civic = civic_exalted_priesthood
+			}
+			modifier = {
+				factor = 10
+				has_ai_personality = evangelising_zealots
+			}
+		}
+		hidden_effect = {
+			from = {
+				set_subject_of = {
+					who = ROOT
+					subject_type = verdisciple
+				}
+				add_modifier = { modifier = ver_overlord_indoctrination days = -1}
+			}
+		}
+	}
+
+	# Transform into Beneficiary (Xenophile)
+	# option = {
+	# 	name = ver.100.beneficiary
+	# 	custom_tooltip = ver.100.beneficiary.tooltip
+	# 	trigger = {
+	# 		OR = {
+	# 			has_ethic = ethic_xenophile
+	# 			has_ethic = ethic_fanatic_xenophile
+	# 			has_valid_civic = civic_feudal_realm
+	# 		}
+	# 	}
+	# 	ai_chance = {
+	# 		factor = 100
+	# 		modifier = {
+	# 			factor = 0
+	# 			is_xenophile = no
+	# 		}
+	# 		modifier = {
+	# 			factor = 2
+	# 			has_ethic = ethic_fanatic_xenophile
+	# 		}
+	# 		modifier = {
+	# 			factor = 3
+	# 			has_valid_civic = civic_free_haven
+	# 		}
+	# 	}
+	# 	hidden_effect = {
+	# 		from = {
+	# 			set_subject_of = {
+	# 				who = ROOT
+	# 				subject_type = verbeneficiary
+	# 			}
+	# 		}
+	# 	}
+	# }
+
+	# Transform into Serf (Xenophobe)
+	option = {
+		name = ver.100.serf
+		custom_tooltip = ver.100.serf.tooltip
+		trigger = {
+			OR = {
+				has_ethic = ethic_xenophobe
+				has_ethic = ethic_fanatic_xenophobe
+				has_valid_civic = civic_feudal_realm
+			}
+		}
+		ai_chance = {
+			factor = 100
+			modifier = {
+				factor = 0
+				is_xenophobe = no
+			}
+			modifier = {
+				factor = 2
+				has_ethic = ethic_fanatic_xenophobe
+			}
+			modifier = {
+				factor = 3
+				has_valid_civic = civic_slaver_guilds
+			}
+		}
+		hidden_effect = {
+			from = {
+				set_subject_of = {
+					who = ROOT
+					subject_type = verserf
+				}
+			}
+		}
+	}
+
+	# Transform into Appendage (Hive Mind)
+	option = {
+		name = ver.100.appendage
+		custom_tooltip = ver.100.appendage.tooltip
+		trigger = { has_authority = auth_hive_mind }
+		ai_chance = {
+			factor = 100
+			modifier = {
+				factor = 0
+				NOT = { has_authority = auth_hive_mind }
+			}
+		}
+		hidden_effect = {
+			from = {
+				set_subject_of = {
+					who = ROOT
+					subject_type = verappendage
+				}
+			}
+		}
+	}
+
+	# Transform into Organic Auxiliary (Machine Intelligence)
+	option = {
+		name = ver.100.organic
+		custom_tooltip = ver.100.organic.tooltip
+		trigger = {
+			has_authority = auth_machine_intelligence
+			NOT = { has_valid_civic = civic_machine_servitor }
+			from = { NOT = { has_authority = auth_machine_intelligence } }
+		}
+		ai_chance = {
+			factor = 100
+			modifier = {
+				factor = 0
+				NOT = {
+					has_authority = auth_machine_intelligence
+					NOT = { has_valid_civic = civic_machine_servitor }
+				}
+			}
+		}
+		hidden_effect = {
+			from = {
+				set_subject_of = {
+					who = ROOT
+					subject_type = verorganic
+				}
+			}
+		}
+	}
+
+	# Transform into Parallel Processor (Machine Intelligence)
+	option = {
+		name = ver.100.parallel
+		custom_tooltip = ver.100.parallel.tooltip
+		trigger = {
+			has_authority = auth_machine_intelligence
+			from = { has_authority = auth_machine_intelligence }
+		}
+		ai_chance = {
+			factor = 100
+			modifier = {
+				factor = 0
+				NOT = {
+					has_authority = auth_machine_intelligence
+					from = {has_authority = auth_machine_intelligence }
+				}
+			}
+		}
+		hidden_effect = {
+			from = {
+				set_subject_of = {
+					who = ROOT
+					subject_type = verparallel
+				}
+			}
+			country_event = { id = vermain.13 }
+		}
+	}
+
+	# Transform into Blood Tributary (Slaver or Barbaric)
+	option = {
+		name = ver.100.blood
+		custom_tooltip = ver.100.blood.tooltip
+		trigger = {
+			OR = {
+				has_valid_civic = civic_barbaric_despoilers
+				has_valid_civic = civic_slaver_guilds
+			}
+			NOT = { any_subject = { is_subject_type = verblood } }
+			From = { NOT = { has_authority = auth_machine_intelligence } }
+		}
+		ai_chance = {
+			factor = 100
+			modifier = {
+				factor = 0
+				NOR = {
+					has_valid_civic = civic_barbaric_despoilers
+					has_valid_civic = civic_slaver_guilds
+				}
+			}
+		}
+		hidden_effect = {
+			from = {
+				set_subject_of = {
+					who = ROOT
+					subject_type = verblood
+				}
+			}
+			country_event = { id = ver.40 }
+		}
+	}
+
+	# Transform into Member State [Decentralized Empires]
+	option = {
+		name = veru.3000.member_state
+		custom_tooltip = SUBJECT_DESC_member_state
+		trigger = {
+			has_global_flag = gf_regentmaker_active
+			has_ascension_perk = ap_decentralization
+			event_target:chosen_subject = { NOT = { has_authority = auth_machine_intelligence } }
+			OR = {
+				has_valid_civic = civic_feudal_realm
+				has_ethic = ethic_egalitarian
+				has_ethic = ethic_fanatic_egalitarian
+				has_ethic = ethic_pacifist
+				has_ethic = ethic_fanatic_pacifist
+			}
+		}
+		ai_chance = {
+			factor = 10
+			modifier = {
+				factor = 0
+				NOR = {
+					has_valid_civic = civic_barbaric_despoilers
+					has_valid_civic = civic_slaver_guilds
+				}
+			}
+		}
+		hidden_effect = {
+			event_target:chosen_subject = {
+				set_subject_of = {
+					who = ROOT
+					subject_type = member_state
+				}
+			}
+		}
+	}
+
+	# Transform into Duchy (z Expanded Traits, Civics, Pops, and More)
+	option = {
+		name = SUBJECT_duchy
+		custom_tooltip = SUBJECT_DESC_duchy
+		trigger = {
+			has_global_flag = expanded_pops_active
+			has_valid_civic = civic_feudal_realm
+		}
+		ai_chance = {
+			factor = 10
+		}
+		hidden_effect = {
+			from = {
+				set_subject_of = {
+					who = ROOT
+					subject_type = duchy
+				}
+			}
+		}
+	}
+
+	# Transform into Foundry Colony [Government Variety Pack]
+	option = {
+		name = SUBJECT_lrsk_gvp_vassal_foundry
+		custom_tooltip = SUBJECT_DESC_lrsk_gvp_vassal_foundry
+		allow = {
+			NOT = { any_subject = { is_subject_type = lrsk_gvp_vassal_foundry } }
+		}
+		trigger = {
+			has_global_flag = lrsk_government_variety_pack_mod_active
+			has_valid_civic = lrsk_gov_var_civic_imperial_economy
+			event_target:chosen_subject = { NOT = { has_authority = auth_machine_intelligence } }
+		}
+		hidden_effect = {
+			event_target:chosen_subject = {
+				set_subject_of = {
+					who = ROOT
+					subject_type = lrsk_gvp_vassal_foundry
+				}
+			}
+		}
+	}
+
+	# Transform into Market Colony [Government Variety Pack]
+	option = {
+		name = SUBJECT_lrsk_gvp_vassal_market
+		custom_tooltip = SUBJECT_DESC_lrsk_gvp_vassal_market
+		allow = {
+			NOT = { any_subject = { is_subject_type = lrsk_gvp_vassal_market } }
+		}
+		trigger = {
+			has_global_flag = lrsk_government_variety_pack_mod_active
+			has_valid_civic = lrsk_gov_var_civic_imperial_economy
+			event_target:chosen_subject = { NOT = { has_authority = auth_machine_intelligence } }
+		}
+		hidden_effect = {
+			event_target:chosen_subject = {
+				set_subject_of = {
+					who = ROOT
+					subject_type = lrsk_gvp_vassal_market
+				}
+			}
+		}
+	}
+
+	# Transform into Trophy Colony [Government Variety Pack]
+	option = {
+		name = SUBJECT_lrsk_gvp_vassal_trophy
+		custom_tooltip = SUBJECT_DESC_lrsk_gvp_vassal_trophy
+		allow = {
+			NOT = { any_subject = { is_subject_type = lrsk_gvp_vassal_trophy } }
+		}
+		trigger = {
+			has_global_flag = lrsk_government_variety_pack_mod_active
+			has_valid_civic = lrsk_gov_var_civic_imperial_economy
+			event_target:chosen_subject = { NOT = { has_authority = auth_machine_intelligence } }
+		}
+		hidden_effect = {
+			event_target:chosen_subject = {
+				set_subject_of = {
+					who = ROOT
+					subject_type = lrsk_gvp_vassal_trophy
+				}
+			}
+		}
+	}
+
+	# Transform into Prospecting Colony [Government Variety Pack]
+	option = {
+		name = SUBJECT_lrsk_gvp_vassal_prospector
+		custom_tooltip = SUBJECT_DESC_lrsk_gvp_vassal_prospector
+		allow = {
+			NOT = { any_subject = { is_subject_type = lrsk_gvp_vassal_prospector } }
+		}
+		trigger = {
+			has_global_flag = lrsk_government_variety_pack_mod_active
+			has_valid_civic = lrsk_gov_var_civic_imperial_economy
+			event_target:chosen_subject = { NOT = { has_authority = auth_machine_intelligence } }
+		}
+		hidden_effect = {
+			event_target:chosen_subject = {
+				set_subject_of = {
+					who = ROOT
+					subject_type = lrsk_gvp_vassal_prospector
+				}
+			}
+		}
+	}
+
+	# Set as vanilla tributary
+	option = {
+		name = choice_veru_tributary
+		custom_tooltip = SUBJECT_DESC_vertributary
+		trigger = {
+		}
+
+		hidden_effect = {
+			log = "ver.100: Setting as [Root.GetName] as Ver Tributary"
+			from = {
+				set_subject_of = {
+					who = root
+					subject_type = vertributary
+				}
+			}
+		}
+	}
+
+	# Leave as vanilla Vassal
+	option = {
+		name = choice_exalted_subject_vassal
+		custom_tooltip = choice_exalted_subject_vassal_tooltip
+
+		hidden_effect = {
+			log = "exalted_subjects.5: Leaving [From.GetName] as Vassal"
+
+			if = {
+				limit = {
+					NOT = {
+						is_subject_type = vervassal
+					}
+				}
+
+				FROM = {
+					set_subject_of = {
+						who = PREV
+						subject_type = vervassal
+					}
+				}
+			}
+		}
+	}
+}
+
+# 6 Overlord chooses type of new tributary
+country_event = {
+	id = exalted_subjects.6
+	title = exalted_subjects.6.name
+	desc = exalted_subjects.6.desc
+	picture = GFX_evt_arguing_senate
+	show_sound = event_conversation
+	location = from
+
+	trigger = {
+		exists = FROM
+		FROM = {
+			NOT = { has_country_flag = exalted_advanced_tributary_offered }
+		}
+		is_overlord_to = FROM
+	}
+
+	immediate = {
+		log = "exalted_subjects.6: [This.GetName] deciding subjugation of [From.GetName]"
+		FROM = {
+			set_country_flag = exalted_advanced_tributary_offered
+		}
+	}
+
+	is_triggered_only = yes
+
+	# Transform into Prefecture
+	option = {
+		name = SUBJECT_exalted_subject_prefecture
+		custom_tooltip = choice_exalted_subject_prefecture_tooltip
+		trigger = {
+			OR = {
+				has_civic = civic_feudal_realm
+				has_authority = auth_hive_mind
+				has_ethic = ethic_militarist
+				has_ethic = ethic_fanatic_militarist
+				has_ethic = ethic_spiritualist
+				has_ethic = ethic_fanatic_spiritualist
+			}
+		}
+		hidden_effect = {
+			log = "exalted_subjects.6: [This.GetName] chose to make [From.GetName] a Prefecture"
+			FROM = {
+				set_subject_of = {
+					who = ROOT
+					subject_type = exalted_subject_prefecture
+				}
+			}
+		}
+	}
+	
+	# Transform into Satellite
+	option = {
+		name = SUBJECT_exalted_subject_satellite
+		custom_tooltip = choice_exalted_subject_satellite_tooltip
+		trigger = {
+			OR = {
+				has_civic = civic_feudal_realm
+				has_authority = auth_machine_intelligence
+				has_ethic = ethic_materialist
+				has_ethic = ethic_fanatic_materialist
+				has_ethic = ethic_xenophile
+				has_ethic = ethic_fanatic_xenophile
+			}
+		}
+		hidden_effect = {
+			log = "exalted_subjects.6: [This.GetName] chose to make [From.GetName] a Satellite"
+			FROM = {
+				set_subject_of = {
+					who = root
+					subject_type = exalted_subject_satellite
+				}
+			}
+		}
+	}
+
+	# Transform into Signatory
+	option = {
+		name = SUBJECT_exalted_subject_signatory
+		custom_tooltip = choice_exalted_subject_signatory_tooltip
+		trigger = {
+			OR = {
+				has_civic = civic_feudal_realm
+				has_authority = auth_hive_mind
+				has_ethic = ethic_egalitarian
+				has_ethic = ethic_fanatic_egalitarian
+				has_ethic = ethic_pacifist
+				has_ethic = ethic_fanatic_pacifist
+			}
+		}
+		hidden_effect = {
+			log = "exalted_subjects.6: [This.GetName] chose to make [From.GetName] a Signatory"
+			FROM = {
+				set_subject_of = {
+					who = ROOT
+					subject_type = exalted_subject_signatory
+				}
+			}
+		}
+	}
+
+	# Transform into Thrall
+	option = {
+		name = SUBJECT_exalted_subject_thrall
+		custom_tooltip = choice_exalted_subject_thrall_tooltip
+		trigger = {
+			OR = {
+				has_civic = civic_feudal_realm
+				has_authority = auth_machine_intelligence
+				has_ethic = ethic_authoritarian
+				has_ethic = ethic_fanatic_authoritarian
+				has_ethic = ethic_xenophobe
+				has_ethic = ethic_fanatic_xenophobe
+			}
+		}
+		hidden_effect = {
+			log = "exalted_subjects.6: [This.GetName] chose to make [From.GetName] a Thrall"
+			FROM = {
+				set_subject_of = {
+					who = ROOT
+					subject_type = exalted_subject_thrall
+				}
+			}
+		}
+	}
+
+	# Leave as vanilla Vassal
+	option = {
+		name = SUBJECT_vervassal
+		custom_tooltip = SUBJECT_DESC_vervassal
+
+		hidden_effect = {
+			log = "ver.100: Leaving [Root.GetName] as Ver Vassal"
+			from = {
+				set_subject_of = {
+					who = root
+					subject_type = vervassal
+				}
+			}
+		}
+	}
+
+	# Leave as vanilla tributary
+	option = {
+		name = choice_exalted_subject_tributary
+		custom_tooltip = choice_exalted_subject_tributary_desc
+
+		hidden_effect = {
+			log = "exalted_subjects.6: Leaving [From.GetName] as Tributary"
+			from = {
+				set_subject_of = {
+					who = root
+					subject_type = vertributary
+				}
+			}
+		}
+	}
+}
